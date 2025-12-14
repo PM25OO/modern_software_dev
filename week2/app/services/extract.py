@@ -65,6 +65,35 @@ def extract_action_items(text: str) -> List[str]:
         unique.append(item)
     return unique
 
+# extract_action_items()的llm驱动版本，通过调用ollama的接口，可用模型有 mistral-nemo:12b 和 llama3.1:8b
+def extract_action_items_llm(text: str) -> List[str]:
+    system_prompt = (
+        "You are an assistant that extracts action items from text. "
+        "Return ONLY a JSON list of strings representing the action items. "
+        "Do not include any other text, markdown formatting, or explanations."
+    )
+
+    try:
+        response = chat(
+            model='llama3.1:8b',
+            messages=[
+                {'role': 'system', 'content': system_prompt},
+                {'role': 'user', 'content': text},
+            ],
+        )
+        content = response['message']['content'].strip()
+
+        # Handle markdown code blocks if present
+        if content.startswith("```"):
+            # Remove first line (```json or ```) and last line (```)
+            lines = content.splitlines()
+            if len(lines) >= 2:
+                content = "\n".join(lines[1:-1])
+
+        return json.loads(content)
+    except Exception:
+        return []
+
 
 def _looks_imperative(sentence: str) -> bool:
     words = re.findall(r"[A-Za-z']+", sentence)
